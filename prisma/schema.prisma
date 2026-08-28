@@ -1,0 +1,152 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int        @id @default(autoincrement())
+  username     String     @unique
+  passwordHash String
+  name         String
+  role         String     @default("admin")
+  createdAt    DateTime   @default(now())
+  incidents    Incident[] @relation("RecordedBy")
+
+  @@map("users")
+}
+
+model Classroom {
+  id          Int       @id @default(autoincrement())
+  level       String
+  grade       Int
+  roomNo      Int
+  advisorName String    @default("")
+  students    Student[]
+  incidents   Incident[]
+
+  @@unique([level, grade, roomNo])
+  @@map("classrooms")
+}
+
+model Student {
+  id            Int        @id @default(autoincrement())
+  fullName      String
+  classroomId   Int?
+  classroom     Classroom? @relation(fields: [classroomId], references: [id])
+  studentNo     String     @default("")
+  guardianName  String     @default("")
+  guardianPhone String     @default("")
+  createdAt     DateTime   @default(now())
+  incidents     Incident[]
+
+  @@map("students")
+}
+
+model Behavior {
+  id        Int                @id @default(autoincrement())
+  label     String
+  isActive  Boolean            @default(true)
+  sortOrder Int                @default(0)
+  incidents IncidentBehavior[]
+
+  @@map("behaviors")
+}
+
+model Incident {
+  id            Int                @id @default(autoincrement())
+  studentId     Int
+  student       Student            @relation(fields: [studentId], references: [id])
+  classroomId   Int?
+  classroom     Classroom?         @relation(fields: [classroomId], references: [id])
+  classroomText String             @default("")
+  studentNo     String             @default("")
+  guardianName  String             @default("")
+  guardianPhone String             @default("")
+  occurredAt    DateTime
+  knownVia      String             @default("")
+  description   String             @default("")
+  status        String             @default("recorded")
+  measureLevel  Int                @default(1)
+  directorOpinion String           @default("")
+  recordedById  Int?
+  recordedBy    User?              @relation("RecordedBy", fields: [recordedById], references: [id])
+  createdAt     DateTime           @default(now())
+  behaviors     IncidentBehavior[]
+  summon        Summon?
+  agreement     Agreement?
+  correction    Correction?
+  signatures    Signature[]
+
+  @@map("incidents")
+}
+
+model IncidentBehavior {
+  incidentId Int
+  behaviorId Int
+  incident   Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  behavior   Behavior @relation(fields: [behaviorId], references: [id])
+
+  @@id([incidentId, behaviorId])
+  @@map("incident_behaviors")
+}
+
+model Summon {
+  id           Int       @id @default(autoincrement())
+  incidentId   Int       @unique
+  incident     Incident  @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  docNo        String
+  meetingDate  DateTime?
+  meetingTime  String    @default("")
+  meetingPlace String    @default("")
+  printedAt    DateTime?
+  printCount   Int       @default(0)
+
+  @@map("summons")
+}
+
+model Agreement {
+  id             Int       @id @default(autoincrement())
+  incidentId     Int       @unique
+  incident       Incident  @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  behaviorDetail String    @default("")
+  goodDeedText   String    @default("")
+  deadline       DateTime?
+  signedAt       DateTime?
+
+  @@map("agreements")
+}
+
+model Correction {
+  id          Int      @id @default(autoincrement())
+  incidentId  Int      @unique
+  incident    Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  actions     String   @default("")
+  suggestion  String   @default("")
+  advisorNote String   @default("")
+
+  @@map("corrections")
+}
+
+model Signature {
+  id         Int      @id @default(autoincrement())
+  incidentId Int
+  incident   Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  role       String
+  signerName String
+  imageData  String
+  signedAt   DateTime @default(now())
+
+  @@unique([incidentId, role])
+  @@map("signatures")
+}
+
+model Setting {
+  key   String @id
+  value String
+
+  @@map("settings")
+}

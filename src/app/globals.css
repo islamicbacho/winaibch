@@ -1,0 +1,91 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-kanit);
+  --font-print: var(--font-sarabun);
+}
+
+@theme {
+  --color-night: #0b0f14;
+  --color-panel: #121a24;
+  --color-panel-2: #0e1520;
+  --color-line: #223042;
+  --color-steel: #8ca3b8;
+  --color-signal: #ffb300;
+  --color-alert: #e53935;
+  --color-mint: #2dd4a7;
+}
+
+@utility hazard {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--color-signal) 0px,
+    var(--color-signal) 14px,
+    #10151d 14px,
+    #10151d 28px
+  );
+}
+
+@utility hazard-red {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--color-alert) 0px,
+    var(--color-alert) 14px,
+    #10151d 14px,
+    #10151d 28px
+  );
+}
+
+@utility clip-corner {
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+}
+
+body {
+  background: var(--color-night);
+  color: #e8eef5;
+  font-family: var(--font-kanit), system-ui, sans-serif;
+}
+
+::selection {
+  background: var(--color-signal);
+  color: #10151d;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line) transparent;
+}
+
+.doc-page {
+  background: #fff;
+  color: #000;
+  font-family: "TH SarabunPSK", "THSarabun", "TH Sarabun New", var(--font-sarabun), sans-serif;
+}
+
+.fill-line {
+  display: inline-block;
+  border-bottom: 1px dotted #000;
+  min-width: 90px;
+  text-align: center;
+  padding: 0 6px;
+  font-weight: 700;
+}
+
+@page {
+  size: A4;
+  margin: 1.5in 1in 1in 1.5in;
+}
+
+@media print {
+  body {
+    background: #fff !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .doc-page {
+    min-height: auto;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+}
