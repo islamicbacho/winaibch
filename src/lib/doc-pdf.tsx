@@ -427,7 +427,8 @@ export async function generateAndSaveDocPdf(
   const rawBuffer = Buffer.from(buffer as unknown as ArrayBuffer);
   const filename = `${sanitize(data.primaryBehavior)}_${sanitize(data.summon?.docNo ?? String(incidentId))}_${sanitize(data.studentName)}_${sanitize(DOC_TYPE_LABELS[docType])}.pdf`;
 
-  if (process.env.GOOGLE_DRIVE_FOLDER_ID && process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
+  const { isDriveConfigured } = await import("./drive");
+  if (isDriveConfigured()) {
     const { uploadToDrive } = await import("./drive");
     const driveFile = await uploadToDrive(rawBuffer, filename);
     return { ok: true, path: driveFile.webViewLink, filename, webViewLink: driveFile.webViewLink };

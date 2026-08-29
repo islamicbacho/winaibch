@@ -3,6 +3,17 @@ import { Readable } from "node:stream";
 
 const SERVICE_ACCOUNT_B64_ENV = "GOOGLE_SERVICE_ACCOUNT_B64";
 const SERVICE_ACCOUNT_JSON_ENV = "GOOGLE_SERVICE_ACCOUNT_JSON";
+const OAUTH_CLIENT_ID_ENV = "GOOGLE_OAUTH_CLIENT_ID";
+const OAUTH_CLIENT_SECRET_ENV = "GOOGLE_OAUTH_CLIENT_SECRET";
+const OAUTH_REFRESH_TOKEN_ENV = "GOOGLE_OAUTH_REFRESH_TOKEN";
+
+function hasOAuthCredentials(): boolean {
+  return Boolean(
+    process.env[OAUTH_CLIENT_ID_ENV] &&
+      process.env[OAUTH_CLIENT_SECRET_ENV] &&
+      process.env[OAUTH_REFRESH_TOKEN_ENV]
+  );
+}
 
 export function getCredentials(): Record<string, unknown> {
   const b64 = process.env[SERVICE_ACCOUNT_B64_ENV];
@@ -57,29 +68,29 @@ export function diagnoseCredentials(): Record<string, unknown> {
   let parseError = "";
   try {
     cred = getCredentials();
-  } catch (e) {
-    parseError = String((e as Error).message);
+  } catch {
+    // leave null when service account is not the active config
   }
   const key = (cred?.private_key as string) ?? "";
   return {
+    oauth: hasOAuthCredentials(),
+    oauthClientId: process.env[OAUTH_CLIENT_ID_ENV] ?? null,
+    folderId: process.env.GOOGLE_DRIVE_FOLDER_ID ?? null,
     b64Set: Boolean(b64),
     jsonSet: Boolean(jsonStr),
     rawLen: jsonStr.length,
-    rawHasRealNewline: /[\n\r]/.test(jsonStr.slice(0, 400)),
-    rawHasBslashN: jsonStr.slice(0, 400).includes("\\n"),
     parseError,
     credType: (cred?.type as string) ?? null,
     hasClientEmail: Boolean(cred?.client_email),
-    pemStarts: key.slice(0, 28),
     pemHasRealNewline: key.includes("\n"),
     pemFragments: key.split("\n").length,
   };
 }
 
 export function isDriveConfigured(): boolean {
-  return Boolean(
-    (process.env[SERVICE_ACCOUNT_B64_ENV] || process.env[SERVICE_ACCOUNT_JSON_ENV]) &&
-      process.env.GOOGLE_DRIVE_FOLDER_ID
+  if (!process.env.GOOGLE_DRIVE_FOLDER_ID) return false;
+  return hasOAuthCredentials() || Boolean(
+    process.env[SERVICE_ACCOUNT_B64_ENV] || process.env[SERVICE_ACCOUNT_JSON_ENV]
   );
 }
 
@@ -88,12 +99,24 @@ export async function uploadToDrive(
   filename: string
 ): Promise<{ id: string; webViewLink: string }> {
   const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID!;
-  const credentials = getCredentials();
 
-  const auth = new google.auth.GoogleAuth({
-    credentials,
-    scopes: ["https://www.googleapis.com/auth/drive"],
-  });
+  let auth;
+  const clientId = process.env[OAUTH_CLIENT_ID_ENV];
+  if (clientId && hasOAuthCredentials()) {
+    const oauth = new google.auth.OAuth2({
+      clientId,
+      clientSecret: process.env[OAUTH_CLIENT_SECRET_ENV],
+      redirectUri: process.env.GOOGLE_OAUTH_REDIRECT_URI || "http://127.0.0.1:8080/oauth2callback",
+    });
+    oauth.setCredentials({ refresh_token: process.env[OAUTH_REFRESH_TOKEN_ENV] });
+    auth = oauth;
+  } else {
+    const credentials = getCredentials();
+    auth = new google.auth.GoogleAuth({
+      credentials,
+      scopes: ["https://www.googleapis.com/auth/drive"],
+    });
+  }
 
   const drive = google.drive({ version: "v3", auth });
 
