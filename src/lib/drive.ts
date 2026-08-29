@@ -3,10 +3,36 @@ import { Readable } from "node:stream";
 
 function getCredentials(): Record<string, unknown> {
   const jsonStr = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
-  if (jsonStr) {
-    return JSON.parse(jsonStr) as Record<string, unknown>;
+  if (!jsonStr) {
+    throw new Error("GOOGLE_SERVICE_ACCOUNT_JSON not set");
   }
-  throw new Error("GOOGLE_SERVICE_ACCOUNT_JSON not set");
+
+  const normalize = (s: string): string =>
+    s
+      .trim()
+      .replace(/^"+|"+$/g, "")
+      .replace(/\\u0022|\\u0027|%22/g, '"')
+      .replace(/[\u0000-\u001f]/g, (ch) =>
+        ch === "\n" ? "\\n" : ch === "\r" ? "\\r" : ch === "\t" ? "\\t" : JSON.stringify(ch).slice(1, -1)
+      )
+      .replace(/\\(n|t|r|b|f|")/g, "$1");
+
+  const layers = [jsonStr, normalize(jsonStr), JSON.parse(normalize(jsonStr))];
+  for (const layer of layers) {
+    if (typeof layer !== "string") {
+      if (layer && typeof layer === "object") return layer as Record<string, unknown>;
+      continue;
+    }
+    try {
+      const parsed = JSON.parse(layer);
+      if (parsed && typeof parsed === "object") return parsed as Record<string, unknown>;
+    } catch {
+      // keep trying next layer
+    }
+  }
+  throw new Error(
+    "GOOGLE_SERVICE_ACCOUNT_JSON invalid: expected a JSON object (type/private_key/client_email)"
+  );
 }
 
 export function isDriveConfigured(): boolean {
