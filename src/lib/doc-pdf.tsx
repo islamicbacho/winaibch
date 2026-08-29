@@ -30,28 +30,27 @@ function findFont(candidates: string[]): string {
   return "";
 }
 
-const pskRegular = findFont([
+const BUNDLED_REGULAR = path.join(process.cwd(), "resources", "fonts");
+const regularFont = findFont([
+  path.join(BUNDLED_REGULAR, "THSarabun-Regular.ttf"),
   path.join(WIN_FONTS, "THSarabun.ttf"),
   path.join(WIN_FONTS, "TH SarabunPSK.ttf"),
   path.join(WIN_FONTS, "TH Sarabun PSK.ttf"),
+  path.join(BUNDLED_REGULAR, "Sarabun-Regular.ttf"),
 ]);
-const pskBold = findFont([
+const boldFont = findFont([
+  path.join(BUNDLED_REGULAR, "THSarabun-Bold.ttf"),
   path.join(WIN_FONTS, "THSarabun Bold.ttf"),
   path.join(WIN_FONTS, "TH SarabunPSK Bold.ttf"),
   path.join(WIN_FONTS, "TH Sarabun PSK Bold.ttf"),
+  path.join(BUNDLED_REGULAR, "Sarabun-Bold.ttf"),
 ]);
 
 Font.register({
   family: "DocFont",
   fonts: [
-    {
-      src: pskRegular || path.join(process.cwd(), "resources", "fonts", "Sarabun-Regular.ttf"),
-      fontWeight: 400,
-    },
-    {
-      src: pskBold || path.join(process.cwd(), "resources", "fonts", "Sarabun-Bold.ttf"),
-      fontWeight: 700,
-    },
+    { src: regularFont, fontWeight: 400 },
+    { src: boldFont, fontWeight: 700 },
   ],
 });
 
