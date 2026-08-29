@@ -66,8 +66,8 @@ const CORRECTION_LABELS: [string, string][] = [
 
 const s = StyleSheet.create({
   page: {
-    paddingTop: 108,
-    paddingLeft: 108,
+    paddingTop: 72,
+    paddingLeft: 72,
     paddingBottom: 72,
     paddingRight: 72,
     fontSize: 16,
@@ -122,6 +122,23 @@ const s = StyleSheet.create({
   sigCenter: { alignItems: "center", marginTop: 28 },
 });
 
+const CHECK_ITEM_SVG =
+  "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'><rect x='0.5' y='0.5' width='11' height='11' fill='white' /><rect x='0.5' y='0.5' width='11' height='11' rx='1' fill='none' stroke='#000' stroke-width='0.8'/><path d='M3 6.2 L4.9 8.1 L9 3.4' fill='none' stroke='#000' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/></svg>";
+
+function CheckItem({ checked }: { checked: boolean }) {
+  const svg = checked
+    ? CHECK_ITEM_SVG
+    : "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'><rect x='0.5' y='0.5' width='11' height='11' fill='white' /><rect x='0.5' y='0.5' width='11' height='11' rx='1' fill='none' stroke='#000' stroke-width='0.8'/></svg>";
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", width: 14, height: 14 }}>
+      <Image
+        src={`data:image/svg+xml,${encodeURIComponent(svg)}`}
+        style={{ width: 14, height: 14, objectFit: "contain" }}
+      />
+    </View>
+  );
+}
+
 function splitDate(s: string): [string, string, string] {
   if (!s) return ["", "", ""];
   const parts = s.trim().split(/\s+/);
@@ -170,7 +187,10 @@ function Checks({ data }: { data: DocData }) {
   return (
     <View style={s.checks}>
       {data.behaviors.map((b) => (
-        <Text key={b.label}>{`( ${b.checked ? "✓" : "  "} ) ${b.label}`}</Text>
+        <View key={b.label} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+          <CheckItem checked={b.checked} />
+          <Text>{b.label}</Text>
+        </View>
       ))}
     </View>
   );
@@ -348,10 +368,20 @@ export function G2Pdf({ data }: { data: DocData }) {
       </View>
       <Text style={[s.bold, { marginTop: 16 }]}>การพิจารณาการลงโทษของฝ่ายกิจการนักเรียน</Text>
       <View style={{ marginLeft: 12, marginTop: 4 }}>
-        <Text>( {data.measureLevel === 1 ? "✓" : "  "} ) ว่ากล่าวตักเตือน</Text>
-        <Text>( {data.measureLevel === 2 ? "✓" : "  "} ) ให้ทำกิจกรรมสาธารณประโยชน์</Text>
-        <Text>( {data.measureLevel === 3 ? "✓" : "  "} ) เชิญผู้ปกครองมาทำทัณฑ์บน</Text>
-        <Text>( {data.measureLevel === 4 ? "✓" : "  "} ) เชิญผู้ปกครองมาให้ย้ายสถานศึกษา</Text>
+        {([1, 2, 3, 4] as number[]).map((lv) => (
+          <View key={lv} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+            <CheckItem checked={data.measureLevel === lv} />
+            <Text>
+              {lv === 1
+                ? "ว่ากล่าวตักเตือน"
+                : lv === 2
+                  ? "ให้ทำกิจกรรมสาธารณประโยชน์"
+                  : lv === 3
+                    ? "เชิญผู้ปกครองมาทำทัณฑ์บน"
+                    : "เชิญผู้ปกครองมาให้ย้ายสถานศึกษา"}
+            </Text>
+          </View>
+        ))}
       </View>
       <View style={{ marginTop: 6, marginLeft: 12 }}>
         {correction.actions.map((a) => {
@@ -366,7 +396,10 @@ export function G2Pdf({ data }: { data: DocData }) {
                     ? "ให้เข้าพบงานปรึกษาแนะแนว"
                     : a.code;
           return (
-            <Text key={a.code}>{`( ✓ ) ${label}${a.deadline ? ` ภายใน ${a.deadline}` : ""}`}</Text>
+            <View key={a.code} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+              <CheckItem checked />
+              <Text>{`${label}${a.deadline ? ` ภายใน ${a.deadline}` : ""}`}</Text>
+            </View>
           );
         })}
       </View>
