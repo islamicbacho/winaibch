@@ -4,7 +4,7 @@ import { Readable } from "node:stream";
 const SERVICE_ACCOUNT_B64_ENV = "GOOGLE_SERVICE_ACCOUNT_B64";
 const SERVICE_ACCOUNT_JSON_ENV = "GOOGLE_SERVICE_ACCOUNT_JSON";
 
-function getCredentials(): Record<string, unknown> {
+export function getCredentials(): Record<string, unknown> {
   const b64 = process.env[SERVICE_ACCOUNT_B64_ENV];
   if (b64) {
     const decoded = Buffer.from(b64.trim(), "base64").toString("utf8");
