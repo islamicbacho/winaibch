@@ -1,8 +1,23 @@
 import { google } from "googleapis";
 import { Readable } from "node:stream";
 
+const SERVICE_ACCOUNT_B64_ENV = "GOOGLE_SERVICE_ACCOUNT_B64";
+const SERVICE_ACCOUNT_JSON_ENV = "GOOGLE_SERVICE_ACCOUNT_JSON";
+
 function getCredentials(): Record<string, unknown> {
-  const jsonStr = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+  const b64 = process.env[SERVICE_ACCOUNT_B64_ENV];
+  if (b64) {
+    const decoded = Buffer.from(b64.trim(), "base64").toString("utf8");
+    try {
+      const parsed = JSON.parse(decoded) as Record<string, unknown>;
+      if (parsed && parsed.private_key) return parsed;
+    } catch {
+      throw new Error("GOOGLE_SERVICE_ACCOUNT_B64 is not valid base64/JSON");
+    }
+    throw new Error("GOOGLE_SERVICE_ACCOUNT_B64 has invalid shape");
+  }
+
+  const jsonStr = process.env[SERVICE_ACCOUNT_JSON_ENV];
   if (!jsonStr) {
     throw new Error("GOOGLE_SERVICE_ACCOUNT_JSON not set");
   }
@@ -35,9 +50,36 @@ function getCredentials(): Record<string, unknown> {
   );
 }
 
+export function diagnoseCredentials(): Record<string, unknown> {
+  const jsonStr = process.env[SERVICE_ACCOUNT_JSON_ENV] ?? "";
+  const b64 = process.env[SERVICE_ACCOUNT_B64_ENV] ?? "";
+  let cred: Record<string, unknown> | null = null;
+  let parseError = "";
+  try {
+    cred = getCredentials();
+  } catch (e) {
+    parseError = String((e as Error).message);
+  }
+  const key = (cred?.private_key as string) ?? "";
+  return {
+    b64Set: Boolean(b64),
+    jsonSet: Boolean(jsonStr),
+    rawLen: jsonStr.length,
+    rawHasRealNewline: /[\n\r]/.test(jsonStr.slice(0, 400)),
+    rawHasBslashN: jsonStr.slice(0, 400).includes("\\n"),
+    parseError,
+    credType: (cred?.type as string) ?? null,
+    hasClientEmail: Boolean(cred?.client_email),
+    pemStarts: key.slice(0, 28),
+    pemHasRealNewline: key.includes("\n"),
+    pemFragments: key.split("\n").length,
+  };
+}
+
 export function isDriveConfigured(): boolean {
   return Boolean(
-    process.env.GOOGLE_SERVICE_ACCOUNT_JSON && process.env.GOOGLE_DRIVE_FOLDER_ID
+    (process.env[SERVICE_ACCOUNT_B64_ENV] || process.env[SERVICE_ACCOUNT_JSON_ENV]) &&
+      process.env.GOOGLE_DRIVE_FOLDER_ID
   );
 }
 
