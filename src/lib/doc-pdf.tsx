@@ -6,6 +6,9 @@ import {
   Text,
   View,
   Font,
+  Svg,
+  Rect,
+  Path,
   renderToBuffer,
 } from "@react-pdf/renderer";
 import fs from "node:fs/promises";
@@ -66,10 +69,10 @@ const CORRECTION_LABELS: [string, string][] = [
 
 const s = StyleSheet.create({
   page: {
-    paddingTop: 72,
-    paddingLeft: 72,
-    paddingBottom: 72,
-    paddingRight: 72,
+    paddingTop: 85,
+    paddingLeft: 85,
+    paddingBottom: 57,
+    paddingRight: 57,
     fontSize: 16,
     fontFamily: "DocFont",
     lineHeight: 1.45,
@@ -122,19 +125,22 @@ const s = StyleSheet.create({
   sigCenter: { alignItems: "center", marginTop: 28 },
 });
 
-const CHECK_ITEM_SVG =
-  "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'><rect x='0.5' y='0.5' width='11' height='11' fill='white' /><rect x='0.5' y='0.5' width='11' height='11' rx='1' fill='none' stroke='#000' stroke-width='0.8'/><path d='M3 6.2 L4.9 8.1 L9 3.4' fill='none' stroke='#000' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/></svg>";
-
 function CheckItem({ checked }: { checked: boolean }) {
-  const svg = checked
-    ? CHECK_ITEM_SVG
-    : "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'><rect x='0.5' y='0.5' width='11' height='11' fill='white' /><rect x='0.5' y='0.5' width='11' height='11' rx='1' fill='none' stroke='#000' stroke-width='0.8'/></svg>";
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", width: 14, height: 14 }}>
-      <Image
-        src={`data:image/svg+xml,${encodeURIComponent(svg)}`}
-        style={{ width: 14, height: 14, objectFit: "contain" }}
-      />
+    <View style={{ flexDirection: "row", alignItems: "center", width: 15, height: 15 }}>
+      <Svg width={15} height={15} viewBox="0 0 12 12">
+        <Rect x={0.5} y={0.5} width={11} height={11} rx={1} fill="white" />
+        <Rect x={0.5} y={0.5} width={11} height={11} rx={1} stroke="#000" strokeWidth={0.8} />
+        {checked ? (
+          <Path
+            d="M3 6.2 L4.9 8.1 L9 3.4"
+            stroke="#000"
+            strokeWidth={1.3}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        ) : null}
+      </Svg>
     </View>
   );
 }
