@@ -98,7 +98,16 @@ export async function uploadToDrive(
   buffer: Buffer,
   filename: string
 ): Promise<{ id: string; webViewLink: string }> {
+  return uploadFileToDrive(buffer, filename, { mimeType: "application/pdf" });
+}
+
+export async function uploadFileToDrive(
+  buffer: Buffer,
+  filename: string,
+  options: { mimeType?: string } = {}
+): Promise<{ id: string; webViewLink: string }> {
   const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID!;
+  const mimeType = options.mimeType || "application/pdf";
 
   let auth;
   const clientId = process.env[OAUTH_CLIENT_ID_ENV];
@@ -126,7 +135,7 @@ export async function uploadToDrive(
       parents: [folderId],
     },
     media: {
-      mimeType: "application/pdf",
+      mimeType,
       body: Readable.from(buffer),
     },
     fields: "id, webViewLink",

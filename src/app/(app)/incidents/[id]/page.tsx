@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import StatusBadge from "@/components/status-badge";
 import { ActionForm, SubmitButton } from "@/components/action-form";
 import SignatureCard from "@/components/signature-card";
+import EvidenceCard from "@/components/evidence-card";
 import CorrectionActionsPicker from "@/components/correction-actions-picker";
 import {
   CORRECTION_LABELS,
@@ -72,6 +73,7 @@ export default async function IncidentDetailPage({
       correction: true,
       recordedBy: true,
       signatures: true,
+      evidences: true,
     },
   });
   if (!incident) notFound();
@@ -257,6 +259,10 @@ export default async function IncidentDetailPage({
           )}
         </div>
       )}
+
+      <div className="mt-6">
+        <EvidenceCard incidentId={incident.id} existing={incident.evidences} />
+      </div>
 
       <div className="mt-6 space-y-4">
         {incident.summon && (

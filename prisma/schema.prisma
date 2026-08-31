@@ -80,6 +80,7 @@ model Incident {
   agreement     Agreement?
   correction    Correction?
   signatures    Signature[]
+  evidences     Evidence[]
 
   @@map("incidents")
 }
@@ -142,6 +143,21 @@ model Signature {
 
   @@unique([incidentId, role])
   @@map("signatures")
+}
+
+model Evidence {
+  id               Int      @id @default(autoincrement())
+  incidentId       Int
+  incident         Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  driveFileId      String
+  driveWebViewLink String
+  filename         String   @default("")
+  title            String   @default("")
+  description      String   @default("")
+  mimeType         String   @default("image/jpeg")
+  createdAt        DateTime @default(now())
+
+  @@map("evidences")
 }
 
 model Setting {
