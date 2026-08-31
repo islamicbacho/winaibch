@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getSession } from "@/lib/session";
+import { db } from "@/lib/db";
 import { generateAndSaveDocPdf } from "@/lib/doc-pdf";
+import { isDriveConfigured, getStudentDriveFolder } from "@/lib/drive";
 import { DOC_TYPE_LABELS, type DocType } from "@/lib/doc-data";
 
 export async function POST(request: NextRequest) {
@@ -23,7 +25,27 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "พารามิเตอร์ไม่ถูกต้อง" }, { status: 400 });
   }
 
-  const result = await generateAndSaveDocPdf(docType, incidentId);
+  const driveConfig = isDriveConfigured();
+
+  let driveFolderId: string | undefined;
+  if (driveConfig) {
+    const incident = await db.incident.findUnique({
+      where: { id: incidentId },
+      include: {
+        student: true,
+        behaviors: { include: { behavior: true } },
+      },
+    });
+    if (incident) {
+      driveFolderId = await getStudentDriveFolder({
+        category: incident.behaviors[0]?.behavior.label ?? "ไม่ระบุ",
+        title: incident.student.fullName,
+        description: incident.studentNo,
+      });
+    }
+  }
+
+  const result = await generateAndSaveDocPdf(docType, incidentId, driveFolderId);
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }

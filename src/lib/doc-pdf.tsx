@@ -434,7 +434,8 @@ function sanitize(input: string): string {
 
 export async function generateAndSaveDocPdf(
   docType: DocType,
-  incidentId: number
+  incidentId: number,
+  driveFolderId?: string
 ): Promise<
   | { ok: true; path: string; filename: string; webViewLink?: string }
   | { ok: false; error: string }
@@ -468,7 +469,7 @@ export async function generateAndSaveDocPdf(
   const { isDriveConfigured } = await import("./drive");
   if (isDriveConfigured()) {
     const { uploadToDrive } = await import("./drive");
-    const driveFile = await uploadToDrive(rawBuffer, filename);
+    const driveFile = await uploadToDrive(rawBuffer, filename, driveFolderId);
     return { ok: true, path: driveFile.webViewLink, filename, webViewLink: driveFile.webViewLink };
   }
 

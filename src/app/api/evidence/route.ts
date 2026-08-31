@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/session";
-import { isDriveConfigured, uploadFileToDrive } from "@/lib/drive";
+import { isDriveConfigured, uploadFileToDrive, getStudentDriveFolder } from "@/lib/drive";
 
 const MAX_IMAGE_CHARS = 4_500_000;
 
@@ -28,7 +28,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "incidentId required" }, { status: 400 });
   }
 
-  const incident = await db.incident.findUnique({ where: { id: incidentId } });
+  const incident = await db.incident.findUnique({
+    where: { id: incidentId },
+    include: {
+      student: true,
+      behaviors: { include: { behavior: true } },
+    },
+  });
   if (!incident) return NextResponse.json({ error: "incident not found" }, { status: 404 });
 
   const imageData = body.imageData ?? "";
@@ -48,7 +54,12 @@ export async function POST(request: Request) {
   const filename = `evidence_${incidentId}_${Date.now()}.${ext}`;
 
   try {
-    const uploaded = await uploadFileToDrive(buffer, filename, { mimeType });
+    const folderId = await getStudentDriveFolder({
+      category: incident.behaviors[0]?.behavior.label ?? "ไม่ระบุ",
+      title: incident.student.fullName,
+      description: incident.studentNo,
+    });
+    const uploaded = await uploadFileToDrive(buffer, filename, { mimeType, folderId });
     const evidence = await db.evidence.create({
       data: {
         incidentId,

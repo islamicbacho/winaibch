@@ -96,37 +96,24 @@ export function isDriveConfigured(): boolean {
 
 export async function uploadToDrive(
   buffer: Buffer,
-  filename: string
+  filename: string,
+  folderId?: string
 ): Promise<{ id: string; webViewLink: string }> {
-  return uploadFileToDrive(buffer, filename, { mimeType: "application/pdf" });
+  return uploadFileToDrive(buffer, filename, {
+    mimeType: "application/pdf",
+    folderId,
+  });
 }
 
 export async function uploadFileToDrive(
   buffer: Buffer,
   filename: string,
-  options: { mimeType?: string } = {}
+  options: { mimeType?: string; folderId?: string } = {}
 ): Promise<{ id: string; webViewLink: string }> {
-  const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID!;
+  const folderId = options.folderId || process.env.GOOGLE_DRIVE_FOLDER_ID!;
   const mimeType = options.mimeType || "application/pdf";
 
-  let auth;
-  const clientId = process.env[OAUTH_CLIENT_ID_ENV];
-  if (clientId && hasOAuthCredentials()) {
-    const oauth = new google.auth.OAuth2({
-      clientId,
-      clientSecret: process.env[OAUTH_CLIENT_SECRET_ENV],
-      redirectUri: process.env.GOOGLE_OAUTH_REDIRECT_URI || "http://127.0.0.1:8080/oauth2callback",
-    });
-    oauth.setCredentials({ refresh_token: process.env[OAUTH_REFRESH_TOKEN_ENV] });
-    auth = oauth;
-  } else {
-    const credentials = getCredentials();
-    auth = new google.auth.GoogleAuth({
-      credentials,
-      scopes: ["https://www.googleapis.com/auth/drive"],
-    });
-  }
-
+  const auth = createDriveAuth();
   const drive = google.drive({ version: "v3", auth });
 
   const res = await drive.files.create({
@@ -156,4 +143,81 @@ export async function uploadFileToDrive(
     id: fileId,
     webViewLink: res.data.webViewLink ?? `https://drive.google.com/file/d/${fileId}/view`,
   };
+}
+
+function sanitize(input: string): string {
+  return input.replace(/[\\/:*?"<>|]/g, "-").trim();
+}
+
+export async function getOrCreateDriveFolderPath(input: {
+  name: string;
+  parents?: string[];
+}): Promise<string> {
+  const parentIds = input.parents?.length ? input.parents : [];
+  if (!parentIds.length) {
+    const rootId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+    if (!rootId) throw new Error("GOOGLE_DRIVE_FOLDER_ID not set");
+    parentIds.push(rootId);
+  }
+
+  const auth = createDriveAuth();
+  const drive = google.drive({ version: "v3", auth });
+
+  const query =
+    `name = ${JSON.stringify(input.name)} and mimeType = 'application/vnd.google-apps.folder'` +
+    ` and (${parentIds
+      .map((parent) => `'${parent}' in parents`)
+      .join(" or ")}) and trashed = false`;
+  const list = await drive.files.list({
+    q: query,
+    fields: "files(id, name)",
+    pageSize: 10,
+    spaces: "drive",
+  });
+
+  const existing = list.data.files?.[0];
+  if (existing?.id) return existing.id;
+
+  const created = await drive.files.create({
+    requestBody: {
+      name: input.name,
+      mimeType: "application/vnd.google-apps.folder",
+      parents: parentIds,
+    },
+    fields: "id",
+  });
+  if (!created.data.id) throw new Error(`create folder failed: ${input.name}`);
+  return created.data.id;
+}
+
+type FolderContext = {
+  category: string;
+  title: string;
+  description: string;
+};
+
+export async function getStudentDriveFolder(ctx: FolderContext): Promise<string> {
+  const categoryId = await getOrCreateDriveFolderPath({ name: ctx.category });
+  const studentFolder = `${ctx.title} (${ctx.description})`;
+  return getOrCreateDriveFolderPath({
+    name: studentFolder,
+    parents: [categoryId],
+  });
+}
+
+function createDriveAuth() {
+  const clientId = process.env[OAUTH_CLIENT_ID_ENV];
+  if (clientId && hasOAuthCredentials()) {
+    const oauth = new google.auth.OAuth2({
+      clientId,
+      clientSecret: process.env[OAUTH_CLIENT_SECRET_ENV],
+      redirectUri: process.env.GOOGLE_OAUTH_REDIRECT_URI || "http://127.0.0.1:8080/oauth2callback",
+    });
+    oauth.setCredentials({ refresh_token: process.env[OAUTH_REFRESH_TOKEN_ENV] });
+    return oauth;
+  }
+  return new google.auth.GoogleAuth({
+    credentials: getCredentials(),
+    scopes: ["https://www.googleapis.com/auth/drive"],
+  });
 }
