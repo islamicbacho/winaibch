@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import StatusBadge from "@/components/status-badge";
+import StudentPhotoEditor from "@/components/student-photo-editor";
+import { photoThumbUrl } from "@/lib/image-utils";
 
 export default async function StudentDetailPage({
   params,
@@ -22,6 +24,7 @@ export default async function StudentDetailPage({
   });
   if (!student) notFound();
 
+  const photoUrl = photoThumbUrl(student.photoDriveId, 320);
   const dateFmt = new Intl.DateTimeFormat("th-TH", { dateStyle: "long" });
 
   return (
@@ -30,21 +33,39 @@ export default async function StudentDetailPage({
         ← กลับรายชื่อนักเรียน
       </Link>
 
-      <div className="mt-3">
-        <h1 className="text-2xl font-extrabold text-white">
-          {student.fullName}
-          <span className="ml-2 text-base font-medium text-steel">
-            {student.classroom
-              ? `${student.classroom.level}${student.classroom.grade}/${student.classroom.roomNo}`
-              : ""}
-            {student.studentNo ? ` • เลขประจำตัว ${student.studentNo}` : ""}
-          </span>
-        </h1>
-        <p className="mt-1 text-sm text-steel">
-          ผู้ปกครอง: {student.guardianName || "-"}
-          {student.guardianPhone ? ` • ${student.guardianPhone}` : ""} • เคสทั้งหมด{" "}
-          {student.incidents.length} เคส
-        </p>
+      <div className="mt-3 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-extrabold text-white">
+            {student.fullName}
+            <span className="ml-2 text-base font-medium text-steel">
+              {student.classroom
+                ? `${student.classroom.level}${student.classroom.grade}/${student.classroom.roomNo}`
+                : ""}
+              {student.studentNo ? ` • เลขประจำตัว ${student.studentNo}` : ""}
+            </span>
+          </h1>
+          <p className="mt-1 text-sm text-steel">
+            ผู้ปกครอง: {student.guardianName || "-"}
+            {student.guardianPhone ? ` • ${student.guardianPhone}` : ""} • เคสทั้งหมด{" "}
+            {student.incidents.length} เคส
+          </p>
+          <div className="mt-4">
+            <StudentPhotoEditor
+              studentId={student.id}
+              photoUrl={photoUrl}
+              name={student.fullName}
+            />
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href={`/print/student/${student.id}?autoprint=1`}
+            target="_blank"
+            className="clip-corner bg-mint px-4 py-2.5 text-sm font-bold text-night transition hover:brightness-110"
+          >
+            ⟐ พิมพ์เอกสารโปรไฟล์
+          </Link>
+        </div>
       </div>
 
       {student.incidents.length === 0 ? (

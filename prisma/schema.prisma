@@ -40,6 +40,8 @@ model Student {
   studentNo     String     @default("")
   guardianName  String     @default("")
   guardianPhone String     @default("")
+  photoDriveId  String     @default("")
+  photoLink     String     @default("")
   createdAt     DateTime   @default(now())
   incidents     Incident[]
 

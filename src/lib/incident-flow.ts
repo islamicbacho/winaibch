@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { isSignatureRole, SIGNATURE_ROLES } from "@/lib/discipline";
+import { saveStudentPhoto } from "@/lib/student-photo";
 
 export type CreateCaseParams = {
   studentIdRaw: string;
@@ -13,6 +14,7 @@ export type CreateCaseParams = {
   description: string;
   behaviorIds: number[];
   recordedById: number;
+  studentPhoto?: string;
 };
 
 export async function createCase(
@@ -20,6 +22,7 @@ export async function createCase(
 ): Promise<{ ok: true; incidentId: number } | { ok: false; error: string }> {
   const { fullName, occurredAt, behaviorIds, recordedById } = params;
   const classroomId = params.classroomId;
+  const studentPhoto = params.studentPhoto ?? "";
 
   if (!fullName) return { ok: false, error: "กรอกชื่อ-สกุลนักเรียน" };
   if (!Number.isInteger(classroomId) || classroomId <= 0)
@@ -64,6 +67,15 @@ export async function createCase(
         guardianPhone: params.guardianPhone,
       },
     });
+  }
+
+  if (studentPhoto) {
+    const saved = await saveStudentPhoto(
+      student.id,
+      studentPhoto,
+      validBehaviors[0]?.label ?? "โปรไฟล์นักเรียน"
+    );
+    if (!saved.ok) return { ok: false, error: saved.error };
   }
 
   const priorCount = await db.incident.count({ where: { studentId: student.id } });

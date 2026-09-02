@@ -29,6 +29,8 @@ export async function GET(request: NextRequest) {
       studentNo: s.studentNo,
       guardianName: s.guardianName,
       guardianPhone: s.guardianPhone,
+      photoDriveId: s.photoDriveId,
+      photoLink: s.photoLink,
     }))
   );
 }

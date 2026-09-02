@@ -34,6 +34,7 @@ export async function createIncident(
       .map((v) => Number(v))
       .filter((n) => Number.isInteger(n) && n > 0),
     recordedById: session.uid,
+    studentPhoto: String(formData.get("studentPhoto") ?? "").trim(),
   });
 
   if (!result.ok) return { error: result.error };

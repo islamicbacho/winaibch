@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { useActionState } from "react";
 import { createIncident } from "@/app/actions/incidents";
 import { SubmitButton } from "@/components/action-form";
+import StudentAvatar from "@/components/student-avatar";
+import { downscaleToDataUrl, photoThumbUrl } from "@/lib/image-utils";
 import type { ActionState } from "@/lib/types";
 
 type ClassroomOption = {
@@ -24,6 +26,8 @@ type StudentSuggestion = {
   studentNo: string;
   guardianName: string;
   guardianPhone: string;
+  photoDriveId: string;
+  photoLink: string;
 };
 
 const input =
@@ -55,6 +59,9 @@ export default function NewIncidentForm({
 
   const [suggestions, setSuggestions] = useState<StudentSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState("");
+  const [photoDirty, setPhotoDirty] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -91,12 +98,36 @@ export default function NewIncidentForm({
     setStudentNo(s.studentNo);
     setGuardianName(s.guardianName);
     setGuardianPhone(s.guardianPhone);
+    setPhotoPreview(s.photoDriveId ? photoThumbUrl(s.photoDriveId) : "");
+    setPhotoDirty(false);
     setShowSuggestions(false);
+  }
+
+  async function onPhotoFile(file: File | undefined | null) {
+    if (!file || !file.type.startsWith("image/")) return;
+    try {
+      const small = await downscaleToDataUrl(file);
+      setPhotoPreview(small);
+      setPhotoDirty(true);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function clearPhoto() {
+    setPhotoPreview("");
+    setPhotoDirty(true);
+    if (fileRef.current) fileRef.current.value = "";
   }
 
   return (
     <form action={formAction} className="space-y-8">
       <input type="hidden" name="studentId" value={studentId} />
+      <input
+        type="hidden"
+        name="studentPhoto"
+        value={photoDirty && photoPreview ? photoPreview : ""}
+      />
 
       <section className="clip-corner border border-line bg-panel">
         <div className="hazard h-1" />
@@ -209,6 +240,47 @@ export default function NewIncidentForm({
                 placeholder="เช่น 08x-xxx-xxxx"
                 className={input}
               />
+            </div>
+          </div>
+
+          <div className="mt-4 border-t border-line pt-4">
+            <label className={labelClass}>รูปประจำตัวนักเรียน (โปรไฟล์)</label>
+            <div className="flex items-center gap-4">
+              {photoPreview ? (
+                <img
+                  src={photoPreview}
+                  alt="รูปนักเรียน"
+                  className="h-20 w-20 rounded-full border border-line bg-white object-cover"
+                />
+              ) : (
+                <StudentAvatar photoDriveId="" name={suggestions.find((s) => s.id === Number(studentId))?.fullName ?? fullName} className="h-20 w-20 text-xl" />
+              )}
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="cursor-pointer rounded border border-signal/60 bg-signal/10 px-4 py-2 text-xs font-bold text-signal transition hover:bg-signal/20">
+                  {photoPreview ? "เปลี่ยนรูป" : "อัพรูปถ่าย"}
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => onPhotoFile(e.target.files?.[0])}
+                  />
+                </label>
+                {photoPreview && (
+                  <button
+                    type="button"
+                    onClick={clearPhoto}
+                    className="rounded border border-line px-3 py-2 text-xs font-semibold text-steel transition hover:border-white hover:text-white"
+                  >
+                    ลบรูป
+                  </button>
+                )}
+                {!photoPreview && (
+                  <span className="text-xs text-steel">
+                    ถ่าย/เลือกรูปประจำตัว — จะแสดงในรายชื่อและเอกสารโปรไฟล์
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </div>
